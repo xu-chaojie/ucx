@@ -35,9 +35,19 @@ const char *uct_alloc_method_names[] = {
     [UCT_ALLOC_METHOD_HEAP] = "heap",
     [UCT_ALLOC_METHOD_MMAP] = "mmap",
     [UCT_ALLOC_METHOD_HUGE] = "huge",
+    [UCT_ALLOC_METHOD_USER] = "user",
     [UCT_ALLOC_METHOD_LAST] = NULL
 };
 
+static uct_user_mem_alloc_t uct_alloc_mem_func;
+static uct_user_mem_free_t uct_free_mem_func;
+
+void uct_set_user_mem_func(uct_user_mem_alloc_t afunc,
+                           uct_user_mem_free_t ffunc)
+{
+    uct_alloc_mem_func = afunc;
+    uct_free_mem_func = ffunc;
+}
 
 static inline int uct_mem_get_mmap_flags(unsigned uct_mmap_flags)
 {
@@ -283,6 +293,32 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
                       length, ucs_status_string(status));
             break;
 
+        case UCT_ALLOC_METHOD_USER:
+            if (!uct_alloc_mem_func) {
+                break;
+            }
+
+            if (mem_type != UCS_MEMORY_TYPE_HOST) {
+                break;
+            }
+
+            /* Allocate aligned memory using libc allocator */
+
+            /* Fixed option is not supported for heap allocation*/
+            if (flags & UCT_MD_MEM_FLAG_FIXED) {
+                break;
+            }
+
+            address = uct_mem_alloc_params_get_address(params);
+            ret = uct_alloc_mem_func(&address, UCS_SYS_CACHE_LINE_SIZE,
+                    length, alloc_name);
+            if (ret == 0) {
+                goto allocated_without_md;
+            }
+
+            ucs_trace("failed to allocate %zu bytes from the heap", alloc_length);
+            break;
+
         default:
             ucs_error("Invalid allocation method %d", *method);
             status = UCS_ERR_INVALID_PARAM;
@@ -327,6 +363,9 @@ ucs_status_t uct_mem_free(const uct_allocated_memory_t *mem)
 
     case UCT_ALLOC_METHOD_HUGE:
         return ucs_sysv_free(mem->address);
+
+    case UCT_ALLOC_METHOD_USER:
+        return uct_free_mem_func(mem->address, mem->length);
 
     default:
         ucs_warn("Invalid memory allocation method: %d", mem->method);

@@ -471,6 +471,7 @@ typedef enum {
     UCT_ALLOC_METHOD_HEAP, /**< Allocate from heap using libc allocator */
     UCT_ALLOC_METHOD_MMAP, /**< Allocate from OS using mmap() syscall */
     UCT_ALLOC_METHOD_HUGE, /**< Allocate huge pages */
+    UCT_ALLOC_METHOD_USER,
     UCT_ALLOC_METHOD_LAST,
     UCT_ALLOC_METHOD_DEFAULT = UCT_ALLOC_METHOD_LAST /**< Use default method */
 } uct_alloc_method_t;
@@ -3625,6 +3626,13 @@ void uct_completion_update_status(uct_completion_t *comp, ucs_status_t status)
     }
 }
 
+typedef int (*uct_user_mem_alloc_t)(void **address, size_t align,
+                                    size_t length, const char *name);
+
+typedef int (*uct_user_mem_free_t)(void *address, size_t length);
+
+void uct_set_user_mem_func(uct_user_mem_alloc_t afunc,
+                           uct_user_mem_free_t ffunc);
 
 /**
  * @example uct_hello_world.c
