@@ -298,13 +298,12 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
                 break;
             }
 
+            /* Assume user allocator only supports HOST memory type */
             if (mem_type != UCS_MEMORY_TYPE_HOST) {
                 break;
             }
 
-            /* Allocate aligned memory using libc allocator */
-
-            /* Fixed option is not supported for heap allocation*/
+            /* Assume user allocator does not suport Fixed option */
             if (flags & UCT_MD_MEM_FLAG_FIXED) {
                 break;
             }
@@ -316,7 +315,8 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
                 goto allocated_without_md;
             }
 
-            ucs_trace("failed to allocate %zu bytes from the heap", alloc_length);
+            ucs_trace("failed to allocate %zu bytes from user memory allocator",
+                      alloc_length);
             break;
 
         default:
