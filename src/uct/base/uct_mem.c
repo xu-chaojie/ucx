@@ -78,7 +78,7 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
                            uct_allocated_memory_t *mem)
 {
     const char *alloc_name;
-    const uct_alloc_method_t *method;
+    const uct_alloc_method_t user_method = UCT_ALLOC_METHOD_USER, *method;
     ucs_memory_type_t mem_type;
     uct_md_attr_t md_attr;
     ucs_status_t status;
@@ -116,6 +116,17 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
               ucs_memory_type_names[mem_type], alloc_length, flags);
     ucs_log_indent(1);
 
+    /* XXX if user hook was set, always use it */
+    if (uct_alloc_mem_func && mem_type == UCS_MEMORY_TYPE_HOST &&
+        !(flags & UCT_MD_MEM_FLAG_FIXED)) {
+            ret = uct_alloc_mem_func(&address, UCS_SYS_CACHE_LINE_SIZE,
+                    length, alloc_name);
+            if (ret == 0) {
+                method = &user_method;
+                goto allocated_without_md;
+            }
+    }
+ 
     for (method = methods; method < methods + num_methods; ++method) {
         ucs_trace("trying allocation method %s", uct_alloc_method_names[*method]);
 
@@ -294,6 +305,7 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
             break;
 
         case UCT_ALLOC_METHOD_USER:
+#if 0
             if (!uct_alloc_mem_func) {
                 break;
             }
@@ -317,6 +329,7 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
 
             ucs_trace("failed to allocate %zu bytes from user memory allocator",
                       alloc_length);
+#endif
             break;
 
         default:
