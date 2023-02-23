@@ -41,10 +41,15 @@ const char *uct_alloc_method_names[] = {
 
 static uct_user_mem_alloc_t uct_alloc_mem_func;
 static uct_user_mem_free_t uct_free_mem_func;
+static int default_allocator_called = 0;
 
 void uct_set_user_mem_func(uct_user_mem_alloc_t afunc,
                            uct_user_mem_free_t ffunc)
 {
+    if (default_allocator_called) {
+        fprintf(stderr, "Warning! before %s, ucx default memory allocators were already used.\n", __func__);
+        abort();
+    }
     uct_alloc_mem_func = afunc;
     uct_free_mem_func = ffunc;
 }
@@ -127,6 +132,10 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
             }
     }
  
+    if (!default_allocator_called) {
+        default_allocator_called = 1;
+    }
+
     for (method = methods; method < methods + num_methods; ++method) {
         ucs_trace("trying allocation method %s", uct_alloc_method_names[*method]);
 
