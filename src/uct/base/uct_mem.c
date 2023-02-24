@@ -43,6 +43,13 @@ static uct_user_mem_alloc_t uct_alloc_mem_func;
 static uct_user_mem_free_t uct_free_mem_func;
 static int default_allocator_called = 0;
 
+/*
+ * This function should be called before ucx is initialized,
+ * if memory block allocated earlier from system allocator is now
+ * freed by user provided allocator, it is a disaster.
+ *
+ * yfxu@
+ */
 void uct_set_user_mem_func(uct_user_mem_alloc_t afunc,
                            uct_user_mem_free_t ffunc)
 {
@@ -54,6 +61,9 @@ void uct_set_user_mem_func(uct_user_mem_alloc_t afunc,
     uct_free_mem_func = ffunc;
 }
 
+/*
+ * A ucs_malloc replacement which calls user provided allocator.
+ */
 void *uct_sys_mem_alloc(size_t size, const char *name)
 {
     if (uct_alloc_mem_func) {
@@ -73,7 +83,7 @@ void uct_sys_mem_free(void *arg)
         uct_free_mem_func(arg, 0);
         return;
     }
-    
+
     ucs_free(arg);
 }
 
@@ -144,7 +154,7 @@ ucs_status_t uct_mem_alloc(size_t length, const uct_alloc_method_t *methods,
               ucs_memory_type_names[mem_type], alloc_length, flags);
     ucs_log_indent(1);
 
-    /* XXX if user hook was set, always use it */
+    /* XXX if user provided allocator was set, always use it */
     if (uct_alloc_mem_func && mem_type == UCS_MEMORY_TYPE_HOST &&
         !(flags & UCT_MD_MEM_FLAG_FIXED)) {
             ret = uct_alloc_mem_func(&address, UCS_SYS_CACHE_LINE_SIZE,

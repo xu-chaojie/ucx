@@ -24,6 +24,7 @@
 
 #include <ucs/datastruct/array.inl>
 
+
 #define UCP_AM_FIRST_FRAG_META_LEN \
     (sizeof(ucp_am_hdr_t) + sizeof(ucp_am_first_ftr_t))
 
