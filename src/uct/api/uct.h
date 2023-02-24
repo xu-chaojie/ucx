@@ -3634,6 +3634,9 @@ typedef int (*uct_user_mem_free_t)(void *address, size_t length);
 void uct_set_user_mem_func(uct_user_mem_alloc_t afunc,
                            uct_user_mem_free_t ffunc);
 
+void *uct_sys_mem_alloc(size_t size, const char *name);
+void uct_sys_mem_free(void *);
+
 /**
  * @example uct_hello_world.c
  * UCT hello world client / server example utility.

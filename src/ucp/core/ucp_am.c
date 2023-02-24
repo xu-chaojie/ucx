@@ -20,9 +20,9 @@
 #include <ucp/proto/proto_common.inl>
 #include <ucp/dt/dt.h>
 #include <ucp/dt/dt.inl>
+#include <uct/api/uct.h>
 
 #include <ucs/datastruct/array.inl>
-
 
 #define UCP_AM_FIRST_FRAG_META_LEN \
     (sizeof(ucp_am_hdr_t) + sizeof(ucp_am_first_ftr_t))
@@ -166,7 +166,7 @@ static UCS_F_ALWAYS_INLINE void ucp_am_release_long_desc(ucp_recv_desc_t *desc)
     /* Don't use UCS_PTR_BYTE_OFFSET here due to coverity false positive report.
      * Need to step back by release_desc_offset, where originally allocated
      * pointer resides. */
-    ucs_free((char*)desc - desc->release_desc_offset);
+    uct_sys_mem_free((char*)desc - desc->release_desc_offset);
 }
 
 static UCS_F_ALWAYS_INLINE int
@@ -1503,7 +1503,7 @@ UCS_PROFILE_FUNC(ucs_status_t, ucp_am_long_first_handler,
      * Note: footer is added right after rdesc (unlike wire format) for easier
      * access to it while processing incoming fragments.
      */
-    first_rdesc = ucs_malloc(total_length + sizeof(ucp_recv_desc_t) +
+    first_rdesc = uct_sys_mem_alloc(total_length + sizeof(ucp_recv_desc_t) +
                                      worker->am.alignment,
                              "ucp recv desc for long AM");
     if (ucs_unlikely(first_rdesc == NULL)) {

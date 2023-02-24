@@ -54,6 +54,29 @@ void uct_set_user_mem_func(uct_user_mem_alloc_t afunc,
     uct_free_mem_func = ffunc;
 }
 
+void *uct_sys_mem_alloc(size_t size, const char *name)
+{
+    if (uct_alloc_mem_func) {
+        void *addr;
+        if (uct_alloc_mem_func(&addr, 16, size, name))
+            return NULL;
+        return addr;
+    }
+    if (!default_allocator_called)
+        default_allocator_called = 1;
+    return ucs_malloc(size, name);
+}
+
+void uct_sys_mem_free(void *arg)
+{
+    if (uct_free_mem_func) {
+        uct_free_mem_func(arg, 0);
+        return;
+    }
+    
+    ucs_free(arg);
+}
+
 static inline int uct_mem_get_mmap_flags(unsigned uct_mmap_flags)
 {
     int mm_flags = 0;
